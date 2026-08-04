@@ -157,7 +157,7 @@ versions:
   # and never auto-discovers a new upstream release. Offset from ../kubens's
   # "42 */6" so the two packages built from the SAME upstream repository do not
   # poll the GitHub API in the same minute.
-  poll_interval: "41 */6 * * *"
+  poll_interval: "53 5-23/6 * * *"
 
 tests:
   # `script:` resolves from the REPOSITORY ROOT — unlike `metadata.default` and
