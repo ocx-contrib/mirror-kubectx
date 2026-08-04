@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="kubectx">
+  <title>kubectx</title>
+  <desc>Original mark authored for the OCX mirror: two opposed arrows for switching kubectl contexts. Upstream ships no logo.</desc>
+  <rect width="512" height="512" rx="112" fill="#326CE5"/>
+  <path d="M128 172 H320 V142 L400 192 L320 242 V212 H128 Z" fill="#FFFFFF"/>
+  <path d="M384 300 H192 V270 L112 320 L192 370 V340 H384 Z" fill="#FFFFFF" opacity="0.62"/>
+</svg>
