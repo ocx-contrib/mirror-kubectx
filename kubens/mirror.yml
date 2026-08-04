@@ -1,0 +1,243 @@
+extends: ../mirror-base.yml
+
+name: kubens
+
+# Logical index package `kubectx/kubens` at the physical path
+# `ghcr.io/ocx-contrib/kubectx/kubens` — slash segments, never hyphen-flattened.
+# The first segment must be this repo's own GitHub owner: GITHUB_TOKEN only
+# authorises packages owned by the repo the workflow runs in.
+#
+# NAMESPACE: `kubectx`, the same as its sibling — the project publishes both
+# tools under that name and this repository carries both. The namespace carries
+# identity, not provenance; `ahmetb/kubectx` is recorded, verifiably, in the
+# index claim's `upstream` block. The namespace was already claimed by
+# `kubectx/kubectx`, but G-04 still makes this package its own human-lane PR.
+target:
+  registry: ghcr.io
+  repository: ocx-contrib/kubectx/kubens
+
+# ⚠️ ONE UPSTREAM REPOSITORY, TWO PACKAGES — and the repository is named after
+# the OTHER one. `ahmetb/kubectx` ships BOTH the `kubectx_*` and the `kubens_*`
+# asset family from every single release, driven by one tag. ../kubectx/mirror.yml
+# points at this same owner/repo with the same tag_pattern and the same floor;
+# the two specs are separated ONLY by their asset patterns. Every pattern below
+# therefore starts with a literal `kubens_` and is anchored at both ends — see
+# the scope block above `assets:`.
+source:
+  type: github_release
+  owner: ahmetb
+  repo: kubectx
+  tag_pattern: "^v(?P<version>\\d+\\.\\d+\\.\\d+)$"
+
+# ─── libc gate (Phase 3.5) — the evidence, not the conclusion ───────────────
+#
+# MEASURED SEPARATELY from ../kubectx. The two binaries come off one goreleaser
+# run, but a sibling's measurement is not evidence for this package — kubens is
+# a different `builds:` entry (it links client-go and is ~2× the size), and the
+# gate is about what THESE bytes require. Upstream's `.goreleaser.yml` sets
+# `CGO_ENABLED=0` on the `kubens` build too, so there is one Linux build per
+# arch and no musl/gnu split to weigh. Measured on the real assets of v0.11.0
+# (newest) and v0.10.0 (the oldest in range):
+#
+#   $ file kubens_v0.11.0_linux_x86_64/kubens
+#   ELF 64-bit LSB executable, x86-64, version 1 (SYSV), statically linked,
+#   BuildID[sha1]=658ae210…, stripped
+#   $ readelf -l …/kubens | grep -c INTERP  → 0
+#   $ readelf -d …/kubens | grep -c NEEDED  → 0
+#
+#   $ file kubens_v0.11.0_linux_arm64/kubens
+#   ELF 64-bit LSB executable, ARM aarch64, version 1 (SYSV), statically
+#   linked, BuildID[sha1]=65802955…, stripped
+#   $ readelf -l …/kubens | grep -c INTERP  → 0
+#   $ readelf -d …/kubens | grep -c NEEDED  → 0
+#
+#   $ file kubens_v0.10.0_linux_x86_64/kubens
+#   ELF 64-bit LSB executable, x86-64, statically linked, …  INTERP 0, NEEDED 0
+#
+# Not UPX-packed (the packer stub defeats this gate by leaving no PT_INTERP and
+# no section headers, so `file` calls every asset "statically linked"):
+#   $ strings -a …/kubens | grep -c '^UPX'          → 0
+#   $ readelf -h …/kubens | grep 'section headers'  → 400 (bytes into file)
+#
+# Cross-checked by execution, not only by header reading:
+#   $ docker run --rm -v …:/b:ro alpine:3.20 /b/kubens --version  → 0.11.0, exit 0
+#
+# No PT_INTERP and no DT_NEEDED on any of them: the artifact requires NOTHING
+# of the host userland, so both Linux keys are BARE. `os.features` states what
+# the artifact REQUIRES of the host, so tagging a static build `+libc.musl`
+# would be a false requirement that hid it from every glibc host. The
+# `alpine:3.20` container leg in `platforms:` is what turns that bare claim into
+# evidence rather than an assertion.
+#
+# ─── Scope: resolution verified BOTH ways on v0.10.0, v0.10.2 and v0.11.0
+#     (the whole in-range set) ─────────────────────────────────────────────
+#
+# Each pattern below was matched against the FULL 27-asset list of every
+# in-range release: all six matched EXACTLY ONE asset on all three, and none
+# matched any `kubectx_*` asset. A pattern matching zero is SILENTLY SKIPPED,
+# not an error, so this check is the only thing standing between a typo and a
+# green run with a missing platform.
+#
+# ⚠️ DECOY ASSETS. Every release also ships two bare, unversioned, unplatformed
+# files named literally `kubens` (5703 bytes) and `kubectx` (6263 bytes) — the
+# original standalone bash scripts, uploaded by goreleaser's
+# `release.extra_files` glob, not platform binaries. A loose substring match on
+# "kubens" would pull the first one in. The `_v<semver>_<os>_<arch>` body plus
+# both anchors makes them unmatchable: verified by matching every pattern here
+# against the literal strings `kubens`, `kubectx` and `checksums.txt` — zero
+# hits.
+#
+# ⚠️ ARCH TOKENS ARE `x86_64` AND `arm64`, not `amd64`/`aarch64` — upstream's
+# goreleaser `name_template` rewrites `amd64` to `x86_64` and leaves `arm64`
+# alone. The mapping is deliberate on the left-hand side of each key.
+#
+# Upstream also publishes, and this mirror deliberately does not carry:
+#   checksums.txt                      — checksum sidecar
+#   kubens, kubectx                    — the legacy bash scripts (above)
+#   kubectx_*                          — the sibling package's family
+#   _linux_{armhf,armv7,ppc64le,s390x} — exotic Linux arches
+#   _windows_{armhf,armv7}             — exotic Windows arches
+#
+# The exotic arches are not a judgement call: **OCX's architecture enum has
+# only `amd64` and `arm64`**, so `linux/armhf`, `linux/armv7`, `linux/ppc64le`,
+# `linux/s390x` and their Windows twins are upstream *assets* that cannot be
+# expressed as platform keys at all. They are dropped, not excluded — and the
+# armhf-vs-armv7 ABI question (goreleaser's `goarm: [6, 7]`) never has to be
+# answered because neither is expressible.
+assets:
+  linux/amd64:
+    - "^kubens_v\\d+\\.\\d+\\.\\d+_linux_x86_64\\.tar\\.gz$"
+  linux/arm64:
+    - "^kubens_v\\d+\\.\\d+\\.\\d+_linux_arm64\\.tar\\.gz$"
+  # ── PASS 2 (darwin) — uncomment with the matching platforms: keys ──────────
+  # darwin/amd64:
+  #   - "^kubens_v\\d+\\.\\d+\\.\\d+_darwin_x86_64\\.tar\\.gz$"
+  # darwin/arm64:
+  #   - "^kubens_v\\d+\\.\\d+\\.\\d+_darwin_arm64\\.tar\\.gz$"
+  # ── PASS 3 (windows) — .zip, not .tar.gz ──────────────────────────────────
+  # windows/amd64:
+  #   - "^kubens_v\\d+\\.\\d+\\.\\d+_windows_x86_64\\.zip$"
+  # windows/arm64:
+  #   - "^kubens_v\\d+\\.\\d+\\.\\d+_windows_arm64\\.zip$"
+
+asset_type:
+  # FLAT archive on EVERY platform — no wrapper directory anywhere. Verified by
+  # `tar tzvf` on linux/x86_64, linux/arm64 and darwin/arm64 of v0.11.0, on
+  # linux/x86_64 of v0.10.0, and by `unzip -l` on windows/x86_64 of v0.11.0:
+  #
+  #   -rw-r--r--  11357  LICENSE
+  #   -rwxr-xr-x  …      kubens           (kubens.exe in the Windows zip)
+  #
+  # Two members, both at the archive root, so there is nothing to strip.
+  # `strip_components: 0` extracts them straight to the content root — which is
+  # why metadata.json's PATH is a bare ${installPath} and ../mirror-base.yml
+  # keeps `bin_scan: off` (the scan only looks BELOW an ${installPath}/<dir>
+  # entry and would reject this spec at exit 65). `type: archive` covers the
+  # tarballs and the Windows zip alike, so no per-platform override is needed.
+  type: archive
+  strip_components: 0
+
+metadata:
+  default: metadata.json
+
+catalog:
+  logo: logo.svg
+
+versions:
+  # Same floor as ../kubectx, and for the same reasons: all three in-range
+  # releases (0.10.0, 0.10.2, 0.11.0) pass the both-ways platform check above,
+  # ship the same flat archive layout, and answer the same CLI surface
+  # tests/smoke.star asserts (`-c`, `<ns> --force`, `-u`, and a malformed
+  # kubeconfig exiting non-zero — all measured on the 0.10.0 and 0.11.0
+  # binaries).
+  #
+  # There is a ~2.7-year publishing gap below this floor (v0.9.5 in 2023-07,
+  # then v0.10.0 in 2026-03) and the three in-range releases all landed inside
+  # one week. That is upstream dormancy followed by a revival, not a discovery
+  # fault — nothing to fix.
+  min: "0.10.0"
+  new_per_run: 5
+  # Without this the generated workflow only fires on workflow_dispatch + push
+  # and never auto-discovers a new upstream release. Offset from ../kubectx's
+  # "41 */6" so the two packages built from the SAME upstream repository do not
+  # poll the GitHub API in the same minute.
+  poll_interval: "42 */6 * * *"
+
+tests:
+  # `script:` resolves from the REPOSITORY ROOT — unlike `metadata.default` and
+  # `catalog.logo` above, which resolve against this spec's own directory.
+  - name: smoke
+    script: kubens/tests/smoke.star
+
+# ─── Platform matrix — RESTATED IN FULL, not merged ─────────────────────────
+#
+# `extends:` is a SHALLOW merge of top-level keys, so this block does not merge
+# with anything — ../mirror-base.yml deliberately declares no `platforms:` at
+# all, precisely because each package here stages its own rollout. Every key
+# this spec declares appears below with its complete `containers:` list.
+#
+# A platform declared here but absent from `assets:` does NOT cost nothing: the
+# generated test matrix is static, so the leg boots its runner, installs the
+# toolchain, finds the platform missing from every version's resolved set,
+# skips, and reports SUCCESS — macOS at 10× and Windows at 2× the minute rate
+# to verify nothing, and a green tile that means nothing. Pass 1 is Linux only,
+# so Linux only is declared.
+#
+# PASS 2 / PASS 3: uncomment the matching `assets:` keys above AND the platform
+# keys below in the SAME edit, by hand (never by sed — a replacement rewrites
+# `\\.` to `\.` inside an asset regex), then re-run `generate ci` naming EVERY
+# spec in this repository and re-validate.
+#
+# libc evidence for the bare keys is above `assets:`; the alpine leg is what
+# makes the universal claim evidence rather than assertion.
+platforms:
+  linux/amd64:
+    runner: ubuntu-latest
+    containers:
+      - { image: "ubuntu:24.04", shell: bash }
+      - { image: "alpine:3.20",  shell: sh }
+      - { image: "fedora:40",    shell: bash }
+  linux/arm64:
+    # arm64 container legs run natively — no qemu — so the runner arch must
+    # match the platform or the renderer reds the leg up front.
+    runner: ubuntu-24.04-arm
+    containers:
+      - { image: "ubuntu:24.04", shell: bash }
+      - { image: "alpine:3.20",  shell: sh }
+      - { image: "fedora:40",    shell: bash }
+  # ── PASS 2 (darwin) ────────────────────────────────────────────────────────
+  # darwin/amd64:
+  #   # Intel slice tested on the arm64 macos-14 runner via Rosetta 2 — GitHub's
+  #   # native macos-13 Intel pool is exhausted and deadlocks the push job.
+  #   runner: macos-14
+  #   prefix: ["arch", "-x86_64"]
+  # darwin/arm64:
+  #   runner: macos-14
+  #   shell: bash
+  # ── PASS 3 (windows) ───────────────────────────────────────────────────────
+  # windows/amd64:
+  #   runner: windows-latest
+  #   shell: pwsh
+  # windows/arm64:
+  #   # Native arm64 Windows runner — the amd64 pool cannot execute an ARM64 PE.
+  #   runner: windows-11-arm
+  #   shell: pwsh
+  #
+  # No `containers:` on darwin or windows — those runners have no Linux
+  # container engine, and the key is rejected at spec load.
+
+annotations:
+  # From the Phase 1.5 license gate:
+  #   $ gh api repos/ahmetb/kubectx/license --jq '.license.spdx_id'
+  #   Apache-2.0
+  # One LICENSE covers the whole upstream repository, so kubens carries the same
+  # SPDX id as its sibling. The LICENSE file also travels INSIDE every release
+  # archive (goreleaser's `files: ["LICENSE"]`), so the terms ship with the
+  # redistributed bytes.
+  org.opencontainers.image.licenses: "Apache-2.0"
+
+announce:
+  # Spelled out, not derived from target.repository — the logical name and the
+  # physical path are related by convention only.
+  package: kubectx/kubens
+  fork: ocx-contrib/index

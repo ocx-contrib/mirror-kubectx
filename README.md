@@ -7,6 +7,7 @@ directory per package.
 | Package | Spec | Publishes to | Announced as | Upstream SPDX |
 |---|---|---|---|---|
 | [kubectx](https://github.com/ahmetb/kubectx) | [`kubectx/mirror.yml`](kubectx/mirror.yml) | `ghcr.io/ocx-contrib/kubectx/kubectx` | `ocx.sh/kubectx/kubectx` | `Apache-2.0` |
+| [kubens](https://github.com/ahmetb/kubectx) | [`kubens/mirror.yml`](kubens/mirror.yml) | `ghcr.io/ocx-contrib/kubectx/kubens` | `ocx.sh/kubectx/kubens` | `Apache-2.0` |
 
 Each upstream release is discovered, re-bundled, smoke-tested per
 `(version, platform)` and only then pushed with cascade tags, after which the
@@ -46,6 +47,7 @@ block instead.
 ```
 mirror-base.yml         repo-wide policy every spec inherits via `extends:`
 kubectx/                one directory per package — same five files each
+kubens/
 ├── mirror.yml          the spec — never at the repo root
 ├── metadata.json       bundle interface
 ├── CATALOG.md          → ocx package describe
@@ -107,7 +109,8 @@ revival that landed three releases in one week, not a discovery fault.
 
 ```bash
 ocx-mirror package pipeline generate ci \
-  --spec kubectx/mirror.yml
+  --spec kubectx/mirror.yml \
+  --spec kubens/mirror.yml
 ```
 
 **Name every spec.** `--spec` *appends* rather than replaces, so a command

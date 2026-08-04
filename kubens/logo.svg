@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512" role="img" aria-label="kubens">
+  <title>kubens</title>
+  <desc>Original mark authored for the OCX mirror: two opposed vertical arrows for switching Kubernetes namespaces within a context. Upstream ships no logo.</desc>
+  <rect width="512" height="512" rx="112" fill="#326CE5"/>
+  <path d="M212 384 V192 H182 L232 112 L282 192 H252 V384 Z" fill="#FFFFFF"/>
+  <path d="M340 128 V320 H370 L320 400 L270 320 H300 V128 Z" fill="#FFFFFF" opacity="0.62"/>
+</svg>
